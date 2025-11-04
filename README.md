@@ -17,18 +17,32 @@
 
 ## 실행 방법
 
-### 백엔드
+### 자동 실행 (권장)
+가상환경을 만들지 않고도 루트 디렉터리에서 한 번의 명령으로 의존성 설치와 서버 기동을 처리할 수 있습니다.
+
 ```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
+python start_app.py
 ```
 
-### 프런트엔드
+위 명령은 아래 과정을 순서대로 수행합니다.
+
+1. 현재 파이썬 해석기(`python`)에 백엔드 의존성을 설치/업데이트합니다.
+2. `frontend/`에서 `npm install`을 실행해 프런트엔드 의존성을 준비합니다.
+3. FastAPI(기본 포트 8000)와 Vite 개발 서버(기본 포트 5173)를 동시에 실행합니다.
+
+프로세스를 종료하려면 터미널에서 `Ctrl+C`를 누르면 두 서버가 모두 안전하게 정리됩니다. 설치를 건너뛰고 싶다면 `python start_app.py --skip-install`, 프런트엔드만 실행하려면 `--no-backend`, 백엔드만 실행하려면 `--no-frontend` 옵션을 사용할 수 있습니다. 포트 변경도 `--backend-port`, `--frontend-port`로 조정 가능합니다.
+
+### 수동 실행
+필요시 다음 명령으로 개별 서버를 직접 실행할 수 있습니다.
+
 ```bash
-cd frontend
+# 백엔드
+cd backend
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+
+# 프런트엔드
+cd ../frontend
 npm install
 npm run dev
 ```
