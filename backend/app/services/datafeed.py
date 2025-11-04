@@ -6,7 +6,8 @@ from datetime import datetime
 from typing import AsyncGenerator, Dict, Optional
 
 import httpx
-import websockets
+from websockets.client import WebSocketClientProtocol, connect
+from websockets.exceptions import ConnectionClosed
 
 from ..core.config import settings
 
@@ -14,12 +15,12 @@ from ..core.config import settings
 class UpbitWebSocketClient:
     def __init__(self, url: Optional[str] = None) -> None:
         self.url = url or str(settings.upbit_ws_url)
-        self._connection: Optional[websockets.WebSocketClientProtocol] = None
+        self._connection: Optional[WebSocketClientProtocol] = None
 
-    async def connect(self) -> websockets.WebSocketClientProtocol:
+    async def connect(self) -> WebSocketClientProtocol:
         if self._connection and not self._connection.closed:
             return self._connection
-        self._connection = await websockets.connect(self.url, ping_interval=settings.websocket_ping_interval)
+        self._connection = await connect(self.url, ping_interval=settings.websocket_ping_interval)
         return self._connection
 
     async def subscribe_ticker(self, symbols: list[str]) -> AsyncGenerator[Dict, None]:
@@ -28,7 +29,7 @@ class UpbitWebSocketClient:
         while True:
             try:
                 message = await conn.recv()
-            except websockets.ConnectionClosed:
+            except ConnectionClosed:
                 await asyncio.sleep(1.0)
                 conn = await self.connect()
                 await conn.send(json.dumps([{"ticket": "order-block-bot"}, {"type": "ticker", "codes": symbols}]))
