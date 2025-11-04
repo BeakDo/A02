@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from .compat import ensure_runtime_compatibility
+
+ensure_runtime_compatibility()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
