@@ -66,7 +66,7 @@ for old, new in repls:
         raise SystemExit(f'missing patch target: {old[:80]!r}')
     s = s.replace(old, new, 1)
 
-p.write_text(s, encoding='utf-8')
+p.write_bytes(s.encode('utf-8'))
 sha = hashlib.sha256(p.read_bytes()).hexdigest()
 expected = 'b93954b3d1dde1e42b1e970a5643652b1ff6badb0787d236c0cce45fc410b377'
 if sha != expected:
