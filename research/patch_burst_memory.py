@@ -6,6 +6,14 @@ s = p.read_text(encoding='utf-8')
 
 repls = [
     (
+        "F['dd24'].between(-.09,-.005)",
+        "((F['dd24'] >= -.09) & (F['dd24'] <= -.005))",
+    ),
+    (
+        "F['bounce24'].between(.005,.11)",
+        "((F['bounce24'] >= .005) & (F['bounce24'] <= .11))",
+    ),
+    (
         """    riskon = (F['breadth'] > 0.48) & (F['btc4'] > -0.025)
     riskoff = (F['breadth'] < 0.52) & (F['btc4'] < 0.025)
 """,
@@ -85,7 +93,7 @@ for old, new in repls:
 
 p.write_bytes(s.encode('utf-8'))
 sha = hashlib.sha256(p.read_bytes()).hexdigest()
-expected = '8e8ff8a3dbcf7a1ac8e4819e3413e67147c40ae4e932cb85c028539cc536b1b9'
+expected = '55ef01e3140c9089685faf8d5c149b76a2a609b89f11dc55ce49d0b98a756879'
 if sha != expected:
     raise SystemExit(f'patched source hash mismatch: {sha}')
 print('patched source verified:', sha)
