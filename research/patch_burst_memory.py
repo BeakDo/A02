@@ -6,6 +6,23 @@ s = p.read_text(encoding='utf-8')
 
 repls = [
     (
+        """    riskon = (F['breadth'] > 0.48) & (F['btc4'] > -0.025)
+    riskoff = (F['breadth'] < 0.52) & (F['btc4'] < 0.025)
+""",
+        """    riskon_s = (F['breadth'] > 0.48) & (F['btc4'] > -0.025)
+    riskoff_s = (F['breadth'] < 0.52) & (F['btc4'] < 0.025)
+    # Broadcast regime Series down rows explicitly; DataFrame & Series aligns to columns by default.
+    riskon = pd.DataFrame(
+        np.broadcast_to(riskon_s.to_numpy(dtype=bool)[:, None], c.shape),
+        index=c.index, columns=c.columns,
+    )
+    riskoff = pd.DataFrame(
+        np.broadcast_to(riskoff_s.to_numpy(dtype=bool)[:, None], c.shape),
+        index=c.index, columns=c.columns,
+    )
+""",
+    ),
+    (
         "panel = {f: pd.DataFrame(index=idx, columns=cols, dtype=float) for f in fields}",
         "panel = {f: pd.DataFrame(index=idx, columns=cols, dtype='float32') for f in fields}",
     ),
@@ -68,7 +85,7 @@ for old, new in repls:
 
 p.write_bytes(s.encode('utf-8'))
 sha = hashlib.sha256(p.read_bytes()).hexdigest()
-expected = 'b93954b3d1dde1e42b1e970a5643652b1ff6badb0787d236c0cce45fc410b377'
+expected = '8e8ff8a3dbcf7a1ac8e4819e3413e67147c40ae4e932cb85c028539cc536b1b9'
 if sha != expected:
     raise SystemExit(f'patched source hash mismatch: {sha}')
 print('patched source verified:', sha)
