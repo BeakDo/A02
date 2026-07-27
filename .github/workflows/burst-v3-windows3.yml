@@ -44,7 +44,7 @@ jobs:
           python - <<'PY'
           from pathlib import Path
           import hashlib
-          assert hashlib.sha256(Path('research/burst_research.py').read_bytes()).hexdigest() == '8e8ff8a3dbcf7a1ac8e4819e3413e67147c40ae4e932cb85c028539cc536b1b9'
+          assert hashlib.sha256(Path('research/burst_research.py').read_bytes()).hexdigest() == '55ef01e3140c9089685faf8d5c149b76a2a609b89f11dc55ce49d0b98a756879'
           print('patched source verified')
           PY
           python -m py_compile research/burst_research.py
