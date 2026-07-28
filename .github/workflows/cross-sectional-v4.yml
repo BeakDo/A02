@@ -38,7 +38,7 @@ jobs:
           raw=src.read_text(encoding='utf-8').replace('\r\n','\n').replace('\r','\n').encode('utf-8')
           src.write_bytes(raw)
           digest=hashlib.sha256(raw).hexdigest()
-          assert digest=='9a31a843ede91bfdff5a903b86b885b9994bb4cd8c72625d2b1e398b88b7b4a3', digest
+          assert digest=='c2d3738e256da1b790d41cc39e6282c0436d7a79d37b6e484938af9b25345c54', digest
           print('verified',digest,len(raw))
           PY
           python -m py_compile research/cross_sectional_v4_optimized.py
