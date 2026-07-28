@@ -1,0 +1,70 @@
+name: Convex Winner Pyramiding Alpha V7
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.convex-v7-trigger'
+
+concurrency:
+  group: convex-v7-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: '1'
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip pandas numpy pyarrow requests
+      - name: Restore, optimize, and verify V7 source
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import base64,gzip,hashlib
+          parts=sorted(Path('research/convex_v7_chunks').glob('part_*'))
+          assert len(parts)==11,len(parts)
+          encoded=''.join(p.read_text(encoding='utf-8').strip() for p in parts)
+          assert hashlib.sha256(encoded.encode()).hexdigest()=='e7bfba83ffb02453dd43185b2b4cd03b97008276f1b036fcbeab441cba01c99c'
+          raw=gzip.decompress(base64.b64decode(encoded))
+          assert hashlib.sha256(raw).hexdigest()=='4583b815e4591d25a99dcd00a9b255abd1ebe2d1084abed99906f0cc40bf9177'
+          Path('research/convex_v7.py').write_bytes(raw)
+          print('verified original',len(raw))
+          PY
+          echo 'b891dab4e50af1b6b68989077e4694becb2d94faf2de2e7fe3d34e9066faba35  research/patch_convex_v7.py' | sha256sum -c -
+          python research/patch_convex_v7.py
+          echo '4bce815892a2df10d7ee4d309fddb0966e52b805c451aa160b684104c091ce55  research/convex_v7.py' | sha256sum -c -
+          python -m py_compile research/convex_v7.py
+      - name: Search annual and cross-symbol validation
+        shell: bash
+        run: |
+          mkdir -p research/convex_v7/results
+          set -o pipefail
+          python research/convex_v7.py search 2>&1 | tee research/convex_v7/results/search.log
+      - name: Open fresh temporal holdout once
+        shell: bash
+        run: |
+          set -o pipefail
+          python research/convex_v7.py holdout 2>&1 | tee research/convex_v7/results/holdout.log
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: convex-v7-results
+          path: |
+            research/convex_v7/results
+            research/convex_v7.py
+          retention-days: 7
+          if-no-files-found: warn
