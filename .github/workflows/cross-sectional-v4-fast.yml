@@ -28,7 +28,7 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: python -m pip install --upgrade pip pandas numpy pyarrow requests
-      - name: Restore verified fast research source
+      - name: Restore and patch verified fast research source
         shell: bash
         run: |
           python - <<'PY'
@@ -40,8 +40,11 @@ jobs:
           assert hashlib.sha256(encoded.encode()).hexdigest()=='8a62f07d172193c335844a781a382e2f6fac3b73f0ed65cbe7268c496b25e0f3'
           raw=gzip.decompress(base64.b64decode(encoded))
           assert hashlib.sha256(raw).hexdigest()=='4cdd92231593392aef3e49f87af89e0ca1482e2e4ecfaaf1d9e1e9e667112d02'
-          Path('research/cross_sectional_v4_fast.py').write_bytes(raw)
-          print('verified',len(raw))
+          s=raw.decode('utf-8').replace("f'{BASE_URL}/{symbol}/1h/{symbol}-1h-{ym}.zip'","f'{BASE_URL}/{symbol}/15m/{symbol}-15m-{ym}.zip'")
+          patched=s.encode('utf-8')
+          assert hashlib.sha256(patched).hexdigest()=='538706974d40f9f0ae0c24716c1a933b688acd69245d83ee96e666e88a1bac0a'
+          Path('research/cross_sectional_v4_fast.py').write_bytes(patched)
+          print('verified',len(patched))
           PY
           python -m py_compile research/cross_sectional_v4_fast.py
       - name: Search development and validation
