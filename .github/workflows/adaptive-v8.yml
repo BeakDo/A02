@@ -1,0 +1,67 @@
+name: Adaptive Failed Breakout Alpha V8
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.adaptive-v8-trigger'
+
+concurrency:
+  group: adaptive-v8-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: '1'
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip pandas numpy pyarrow requests
+      - name: Restore and verify V8 source
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import base64,gzip,hashlib
+          parts=sorted(Path('research/adaptive_v8_chunks').glob('part_*'))
+          assert len(parts)==11,len(parts)
+          encoded=''.join(p.read_text(encoding='utf-8').strip() for p in parts)
+          assert hashlib.sha256(encoded.encode()).hexdigest()=='c2b615511e36858bf49fa85b2f42be74778e051d004625cceded78989e3b22df'
+          raw=gzip.decompress(base64.b64decode(encoded))
+          assert hashlib.sha256(raw).hexdigest()=='ab4c4bd18dd97c51a9c74894844fda60b9ea31a644ed8d115ff15f95ce8273f6'
+          Path('research/adaptive_v8.py').write_bytes(raw)
+          print('verified',len(raw))
+          PY
+          python -m py_compile research/adaptive_v8.py
+      - name: Search annual and cross-symbol validation
+        shell: bash
+        run: |
+          mkdir -p research/adaptive_v8/results
+          set -o pipefail
+          python research/adaptive_v8.py search 2>&1 | tee research/adaptive_v8/results/search.log
+      - name: Open fresh temporal holdout once
+        shell: bash
+        run: |
+          set -o pipefail
+          python research/adaptive_v8.py holdout 2>&1 | tee research/adaptive_v8/results/holdout.log
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: adaptive-v8-results
+          path: |
+            research/adaptive_v8/results
+            research/adaptive_v8.py
+          retention-days: 7
+          if-no-files-found: warn
