@@ -41,8 +41,13 @@ jobs:
           raw=gzip.decompress(base64.b64decode(encoded))
           assert hashlib.sha256(raw).hexdigest()=='4cdd92231593392aef3e49f87af89e0ca1482e2e4ecfaaf1d9e1e9e667112d02'
           s=raw.decode('utf-8').replace("f'{BASE_URL}/{symbol}/1h/{symbol}-1h-{ym}.zip'","f'{BASE_URL}/{symbol}/15m/{symbol}-15m-{ym}.zip'")
-          patched=s.encode('utf-8')
-          assert hashlib.sha256(patched).hexdigest()=='538706974d40f9f0ae0c24716c1a933b688acd69245d83ee96e666e88a1bac0a'
+          old1="df['timestamp']=pd.to_datetime(df['open_time'],unit='ms',utc=True,errors='coerce')"
+          new1="unit='us' if pd.to_numeric(df['open_time'],errors='coerce').dropna().median()>1e14 else 'ms'\n    df['timestamp']=pd.to_datetime(df['open_time'],unit=unit,utc=True,errors='coerce')"
+          old2="ts=pd.to_datetime(df[tcol],unit='ms',utc=True,errors='coerce')"
+          new2="tv=pd.to_numeric(df[tcol],errors='coerce')\n    unit='us' if tv.dropna().median()>1e14 else 'ms'\n    ts=pd.to_datetime(tv,unit=unit,utc=True,errors='coerce')"
+          assert old1 in s and old2 in s
+          patched=s.replace(old1,new1).replace(old2,new2).encode('utf-8')
+          assert hashlib.sha256(patched).hexdigest()=='d7f062c915e68878195272a21d4c9b86a3e4e0131ff1e34aa9aa1f8d6ec106e2'
           Path('research/cross_sectional_v4_fast.py').write_bytes(patched)
           print('verified',len(patched))
           PY
