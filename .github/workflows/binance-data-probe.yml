@@ -23,7 +23,8 @@ jobs:
       - name: Probe official archives
         shell: bash
         run: |
-          python - <<'PY'
+          set -o pipefail
+          python - <<'PY' 2>&1 | tee binance-probe.log
           import io, zipfile, requests, pandas as pd
           tests=[]
           for sym in ['BTCUSDT','FETUSDT','ANKRUSDT']:
@@ -54,3 +55,9 @@ jobs:
               except Exception as e:
                   print('ERROR',sym,kind,repr(e))
           PY
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: binance-data-probe
+          path: binance-probe.log
+          retention-days: 3
