@@ -28,7 +28,7 @@ jobs:
           python-version: '3.12'
       - name: Install dependencies
         run: python -m pip install --upgrade pip pandas numpy pyarrow requests
-      - name: Restore and verify V7 source
+      - name: Restore, optimize, and verify V7 source
         shell: bash
         run: |
           python - <<'PY'
@@ -41,8 +41,11 @@ jobs:
           raw=gzip.decompress(base64.b64decode(encoded))
           assert hashlib.sha256(raw).hexdigest()=='4583b815e4591d25a99dcd00a9b255abd1ebe2d1084abed99906f0cc40bf9177'
           Path('research/convex_v7.py').write_bytes(raw)
-          print('verified',len(raw))
+          print('verified original',len(raw))
           PY
+          echo 'b891dab4e50af1b6b68989077e4694becb2d94faf2de2e7fe3d34e9066faba35  research/patch_convex_v7.py' | sha256sum -c -
+          python research/patch_convex_v7.py
+          echo '4bce815892a2df10d7ee4d309fddb0966e52b805c451aa160b684104c091ce55  research/convex_v7.py' | sha256sum -c -
           python -m py_compile research/convex_v7.py
       - name: Search annual and cross-symbol validation
         shell: bash
