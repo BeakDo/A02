@@ -28,16 +28,18 @@ jobs:
           python-version: "3.12"
       - name: Install dependencies
         run: python -m pip install --upgrade pip pandas numpy pyarrow requests
-      - name: Verify optimized research source
+      - name: Normalize and verify optimized research source
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
           import hashlib
           src=Path('research/cross_sectional_v4_optimized.py')
-          digest=hashlib.sha256(src.read_bytes()).hexdigest()
+          raw=src.read_text(encoding='utf-8').replace('\r\n','\n').replace('\r','\n').encode('utf-8')
+          src.write_bytes(raw)
+          digest=hashlib.sha256(raw).hexdigest()
           assert digest=='9a31a843ede91bfdff5a903b86b885b9994bb4cd8c72625d2b1e398b88b7b4a3', digest
-          print('verified',digest,len(src.read_bytes()))
+          print('verified',digest,len(raw))
           PY
           python -m py_compile research/cross_sectional_v4_optimized.py
       - name: Search development and cross-symbol validation
