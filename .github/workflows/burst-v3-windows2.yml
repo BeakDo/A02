@@ -1,74 +1,8 @@
-name: Sealed Burst Convexity V3 Windows 2
-
+name: Sealed Burst Convexity V3 Windows 2 Retired
 on:
-  pull_request:
-    branches: [main]
-    types: [opened, synchronize, reopened]
-    paths:
-      - '.burst-win2-trigger'
-
-concurrency:
-  group: sealed-burst-v3-windows2-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
-
-env:
-  PYTHONUNBUFFERED: "1"
-
+  workflow_dispatch:
 jobs:
-  research:
+  retired:
     runs-on: windows-latest
-    timeout-minutes: 300
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - name: Install dependencies
-        run: python -m pip install --upgrade pip pandas numpy pyarrow requests
-      - name: Restore source independent of line endings
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          import base64, gzip, hashlib
-          paths=sorted(Path('research/burst_chunks_v3').glob('part_*'))
-          encoded=''.join(p.read_text(encoding='utf-8').strip() for p in paths)
-          assert hashlib.sha256(encoded.encode()).hexdigest() == '5b7e41e52ce1b9344f10d8799d06679301861781a0b41d3228c4de0234e93f39'
-          raw=gzip.decompress(base64.b64decode(encoded))
-          assert hashlib.sha256(raw).hexdigest() == 'a249c82623c94134b008f04bbe08330b5a7d286de61e0bd72ab3c7927b7d7446'
-          Path('research/burst_research.py').write_bytes(raw)
-          print('original source verified')
-          PY
-          python research/patch_burst_memory.py
-          python - <<'PY'
-          from pathlib import Path
-          import hashlib
-          raw=Path('research/burst_research.py').read_bytes()
-          assert hashlib.sha256(raw).hexdigest() == 'b93954b3d1dde1e42b1e970a5643652b1ff6badb0787d236c0cce45fc410b377'
-          print('patched source verified')
-          PY
-          python -m py_compile research/burst_research.py
-      - name: Search pre-holdout and freeze candidate
-        shell: bash
-        run: |
-          mkdir -p research/burst_convexity/results
-          set -o pipefail
-          python research/burst_research.py search 2>&1 | tee research/burst_convexity/results/search.log
-      - name: Open holdout once
-        shell: bash
-        run: |
-          set -o pipefail
-          python research/burst_research.py holdout 2>&1 | tee research/burst_convexity/results/holdout.log
-      - name: Upload results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: sealed-burst-v3-windows2-results
-          path: |
-            research/burst_convexity/results
-            research/burst_research.py
-          retention-days: 7
-          if-no-files-found: warn
+      - run: echo "V3 Windows 2 research completed and retired."
