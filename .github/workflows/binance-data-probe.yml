@@ -1,0 +1,56 @@
+name: Binance Data Probe
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+    paths:
+      - '.binance-probe-trigger'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install requests pandas
+      - name: Probe official archives
+        shell: bash
+        run: |
+          python - <<'PY'
+          import io, zipfile, requests, pandas as pd
+          tests=[]
+          for sym in ['BTCUSDT','FETUSDT','ANKRUSDT']:
+              for interval in ['15m','1h']:
+                  tests.append((sym,interval,f'https://data.binance.vision/data/futures/um/monthly/klines/{sym}/{interval}/{sym}-{interval}-2023-01.zip'))
+              tests.append((sym,'fund',f'https://data.binance.vision/data/futures/um/monthly/fundingRate/{sym}/{sym}-fundingRate-2023-01.zip'))
+          s=requests.Session(); s.headers['User-Agent']='binance-data-probe/1.0'
+          for sym,kind,url in tests:
+              try:
+                  r=s.get(url,timeout=45)
+                  print('\nURL',url)
+                  print('STATUS',r.status_code,'LEN',len(r.content),'TYPE',r.headers.get('content-type'),'FINAL',r.url)
+                  print('HEAD',r.content[:32])
+                  if r.status_code==200:
+                      with zipfile.ZipFile(io.BytesIO(r.content)) as z:
+                          print('FILES',z.namelist())
+                          name=z.namelist()[0]
+                          raw=z.read(name)
+                          print('RAW_HEAD',raw[:180])
+                          if kind=='fund':
+                              df=pd.read_csv(io.BytesIO(raw))
+                          else:
+                              df=pd.read_csv(io.BytesIO(raw),header=None)
+                          print('SHAPE',df.shape,'COLS',list(df.columns),'FIRST',df.head(2).to_dict('records'))
+                          if kind!='fund':
+                              v=pd.to_numeric(df.iloc[:,0],errors='coerce')
+                              print('TIME_MEDIAN',v.dropna().median(),'NONNA',v.notna().sum())
+              except Exception as e:
+                  print('ERROR',sym,kind,repr(e))
+          PY
